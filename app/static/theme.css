@@ -21,6 +21,8 @@ body.lake {margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--fo
 .lake .main-lake {flex:1;display:grid;grid-template-areas:"s s s" "k k k" "c r r" "i r r" "a a a";grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr);gap:var(--gap);align-content:start;padding:var(--pad)}
 .lake .source {grid-area:s;display:flex;align-items:center;flex-wrap:wrap;gap:var(--gap);padding:var(--pad);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);min-width:0}
 .lake .source input {position:absolute;width:1px;height:1px;opacity:0}
+.lake .source #pilot-partitions {position:static;width:11em;max-width:100%;height:auto;opacity:1;padding:.42em .68em;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.lake .source label[for="pilot-partitions"] {display:flex;align-items:center;gap:7px;font-weight:700}
 .lake .source:has(input:focus-visible) .file {outline:2px solid var(--accent);outline-offset:3px}
 .lake .file {cursor:pointer;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .lake #file-name {overflow-wrap:anywhere;max-width:100%}
@@ -40,6 +42,12 @@ body.lake {margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--fo
 .lake h2 {font-size:18px;margin:0 0 .65em}
 .lake .panel-head {display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between}
 .lake #counts,#run-status {color:var(--muted);overflow-wrap:anywhere}
+.lake #release-state,.lake .signability {font-weight:700;padding:4px 9px;border-radius:12px;border:1px solid currentColor;white-space:nowrap}
+.lake #release-state[data-ready="true"],.lake .signability[data-ready="true"] {color:#247044;background:color-mix(in srgb,#247044 9%,var(--surface))}
+.lake #release-state[data-ready="false"],.lake .signability[data-ready="false"] {color:var(--fault);background:color-mix(in srgb,var(--fault) 8%,var(--surface))}
+.lake #release-state[data-ready="approved"] {color:var(--accent);background:var(--soft)}
+.lake #release-state[data-ready="unknown"],.lake #release-state[data-ready="preview"] {color:var(--muted);border-color:var(--line)}
+.lake .signability {white-space:normal;margin:6px 0 10px}
 .lake .scroll {overflow:auto;max-height:297px}
 .lake table {border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;min-width:350px}
 .lake th,td {text-align:left;height:var(--row);padding:4px 11px;border-bottom:1px solid var(--line);white-space:nowrap}

@@ -8,6 +8,7 @@ const labels = {READY:'通过', MISMATCH:'数值不符', PENDING:'待复核', AP
   HORIZON_UNOBSERVED:'超出观察范围', CELL_CONFLICT:'单元格重复', MARGINAL_INFERENCE:'可经边际反推',
   FIELD_REGISTRY_CONFLICT:'字段登记冲突', BREAKING_SCHEMA:'存在不兼容变更', SLOT_COLLISION:'号源登记冲突',
   STALE_CANCELLATION:'取消记录失效', STOP_ORDER_CONFLICT:'站序冲突', MISSING_STOPS:'到站序列缺站',
+  PARTITION_MISMATCH:'分区计数不符', PARTITION_COUNT_MISMATCH:'分区计数不符', STALE_RULE_VERSION:'规则版本已停用',
   SAMPLE_PAIR_MISSING:'平行样不完整', METHOD_MISMATCH:'检测方法不一致', QUALITY_LIMIT:'质控限值超出',
   UNKNOWN_AUTHOR:'未知作者', ENTITY_COUNT_MISMATCH:'归并组数不符', DUPLICATE_DAY:'日期重复',
   INVALID_SCENARIO:'补货参数无效', SERVICE_TARGET_MISSED:'服务目标未达', INVALID_SAMPLING_PLAN:'抽样计划无效',
@@ -18,6 +19,9 @@ const labels = {READY:'通过', MISMATCH:'数值不符', PENDING:'待复核', AP
   DUPLICATE_WEIGHING:'重复过磅记录', WEIGHING_MISSING:'过磅记录缺失', TARE_OUT_OF_RANGE:'皮重时间超出范围',
   INVALID_LAB_READING:'化验读数无效', MOISTURE_MISSING:'缺少含水率', INVALID_FIELD:'字段定义无效',
   UNKNOWN_FIELD:'未知字段', INVALID_APPROVAL:'审批区间无效', APPROVAL_OVERLAP:'审批区间重叠',
+  partition_results:'分区核验', partition_checks:'分区核验', partition_balanced:'分区计数一致',
+  used_rule_versions:'使用规则版本', rule_version:'规则版本', rule_ref:'规则',
+  same_sequence_equality:'同序列等值剔除', observed:'可见行数', total:'数据行数', removed:'剔除数',
   INVALID_TABLE:'公开表结构无效', INVALID_PING:'定位点无效', INVALID_DISPATCH:'班次要求无效',
   INVALID_SAMPLE:'样本登记无效', INVALID_REGISTER:'作者登记无效', INVALID_SIMILARITY:'相似度无效',
   AUTHORITY_EXCLUSION_CONFLICT:'权威编号与禁用关系冲突', HISTORY_LIMIT:'历史窗口过长',
@@ -101,9 +105,35 @@ export function snapshot(report, selected, stage) {
   table.createTHead().append(head);
   const picked = report.cases?.find(row=>row.case===selected);
   document.querySelector('#detail-title').textContent = picked ? `分组 ${picked.case}` : '采信摘要';
-  const shown = picked ? picked.measure?.evidence ?? picked.prep?.details ?? {原因:picked.status} : stats.reasons;
+  let shown = stats.reasons;
+  if (picked?.measure) {
+    shown = {
+      ...picked.measure.evidence,
+      partition_results: picked.measure.partition_results,
+      partition_balanced: picked.measure.partition_balanced,
+      used_rule_versions: picked.measure.used_rule_versions,
+    };
+  } else if (picked?.prep) {
+    shown = picked.prep.details;
+  } else if (picked) {
+    shown = {原因:picked.status};
+  }
   document.querySelector('#detail').replaceChildren(detailValue(shown));
   document.querySelector('#counts').textContent = report.balance ? `行数 ${report.balance.accounted}/${report.balance.input} · ${report.balance.ready} 组通过` : `采信 ${stats.accepted} 行 · 隔离 ${stats.rejected} 行`;
+  const release = document.querySelector('#release-state');
+  if (release) {
+    if (report.balance) {
+      const releasable = Boolean(report.balance.releasable);
+      release.textContent = releasable ? '✓ 对账可签发' : '不可签发';
+      release.dataset.ready = String(releasable);
+      const partitionText = report.balance.partition_count ? ` · ${report.balance.partition_count-report.balance.partition_mismatches}/${report.balance.partition_count} 个分区相符` : '';
+      release.title = `${(report.balance.blockers || []).join('、')}${partitionText}`;
+    } else {
+      release.textContent = '阶段预览';
+      release.dataset.ready = 'preview';
+      release.title = '执行全批后判断是否可签发';
+    }
+  }
 }
 
 export function history(items, active) {

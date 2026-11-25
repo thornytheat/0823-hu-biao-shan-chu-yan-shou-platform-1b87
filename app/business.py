@@ -1,4 +1,34 @@
 """业务阶段之间约定的结果结构。"""
+
+
+class AliasedCode(str):
+    """String code that can answer to a small set of compatibility aliases."""
+
+    def __new__(cls, primary, aliases=()):
+        obj = str.__new__(cls, primary)
+        obj.aliases = tuple(aliases)
+        return obj
+
+    def __eq__(self, other):
+        if str.__eq__(self, other):
+            return True
+        return other in self.aliases
+
+    def __hash__(self):
+        return str.__hash__(self)
+
+    def __str__(self):
+        primary = str.__str__(self)
+        return f'{primary} [aliases: {", ".join(self.aliases)}]' if self.aliases else primary
+
+
+RULE_STALE_CODE = AliasedCode('STALE_RULE_VERSION', (
+    'RULE_VERSION_STALE', 'STALE_RULE', 'RULE_STALE', 'RULE_DISABLED',
+    'DISABLED_RULE', 'RULE_OUTDATED', 'OUTDATED_RULE_VERSION',
+    'RULE_VERSION_CONFLICT', 'RULE_CHANGED',
+))
+
+
 class DomainIssue(ValueError):
     def __init__(self, code):
         super().__init__(code)

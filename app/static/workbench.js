@@ -5,6 +5,7 @@ import {visualize} from './plots.js';
 const form = document.querySelector('#source');
 const file = document.querySelector('#file');
 const profile = document.querySelector('#profile');
+const pilotPartitions = document.querySelector('#pilot-partitions');
 const status = document.querySelector('#notice');
 const detail = document.querySelector('#review');
 const evidence = document.querySelector('#evidence');
@@ -16,12 +17,41 @@ function source() {
   const data = new FormData();
   if (file.files.length) data.append('file',file.files[0]);
   else data.append('sample',profile.value);
+  if (pilotPartitions.value.trim()) data.append('pilot_partitions',pilotPartitions.value.trim());
   return data;
 }
 
 function announce(text, failure = false) {
   status.textContent = text;
   status.dataset.failure = String(failure);
+}
+
+const blockerLabels = {
+  NO_BUSINESS_CASES:'没有业务分组', ISOLATED_ROWS:'存在隔离坏行', INPUT_NOT_BALANCED:'行数对账不平',
+  UNRESOLVED_CASES:'仍有分组未通过', PARTITION_MISMATCH:'分区可见行数与预期不一致',
+  UNRESOLVED_ISSUES:'存在待处理差异', STALE_RULE_VERSION:'所用规则已换版或停用，请重新执行批次',
+  RUN_FINALIZED:'批次已经签发',
+};
+
+function renderSignability(sign) {
+  const node = document.querySelector('#signability');
+  const release = document.querySelector('#release-state');
+  const approved = batch?.status === 'APPROVED';
+  const signable = Boolean(sign?.signable);
+  node.dataset.ready = String(signable);
+  if (approved) {
+    node.textContent = '✓ 批次已签发，结论已锁定';
+  } else if (signable) {
+    node.textContent = '✓ 可以签发：输入、分组、分区数量及规则版本均有效';
+  } else {
+    const blockers = (sign?.blockers || ['UNRESOLVED_ISSUES']).map(code => blockerLabels[code] || code).join('；');
+    node.textContent = `暂不能签发：${blockers}`;
+  }
+  if (release && batch) {
+    release.textContent = approved ? '已签发' : signable ? '✓ 可签发' : '不可签发';
+    release.dataset.ready = approved ? 'approved' : String(signable);
+  }
+  return signable && !approved;
 }
 
 function draw() {
@@ -33,7 +63,8 @@ function draw() {
   detail.hidden = !batch;
   if (batch) {
     document.querySelector('#run-status').textContent = `${batch.id.slice(0,10)} · ${batch.status} · r${batch.revision}`;
-    detail.querySelector('[value="APPROVED"]').disabled = !report.balance.releasable || batch.status==='APPROVED';
+    const canApprove = renderSignability(batch.signability);
+    detail.querySelector('[value="APPROVED"]').disabled = !canApprove;
     detail.querySelector('[value="HELD"]').disabled = batch.status==='APPROVED';
     evidence.href = `/api/runs/${batch.id}/evidence`;
   }
@@ -83,6 +114,7 @@ form.addEventListener('submit', event => {
 });
 const filename = document.querySelector('#file-name');
 profile.addEventListener('change',()=>{file.value=''; filename.textContent=''; preview(stage);});
+pilotPartitions.addEventListener('change',()=>preview(stage));
 file.addEventListener('change',()=>{filename.textContent=file.files[0]?.name || ''; preview(stage);});
 document.querySelector('#rows').addEventListener('click',event=>{
   const button = event.target.closest('[data-case]');
@@ -99,8 +131,16 @@ detail.addEventListener('submit',event=>{
   event.preventDefault();
   perform(async()=>{
     const payload={status:event.submitter.value,revision:batch.revision,note:detail.elements.note.value};
-    const result=await request(`/api/runs/${batch.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    show(result,true); announce(result.status==='APPROVED'?'批次已签发':'批次已暂缓'); await refresh();
+    try {
+      const result=await request(`/api/runs/${batch.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      show(result,true); announce(result.status==='APPROVED'?'批次已签发':'批次已暂缓'); await refresh();
+    } catch (error) {
+      try {
+        const result=await request(`/api/runs/${batch.id}`);
+        show(result,true);
+      } catch (_) { /* keep the original error visible */ }
+      throw error;
+    }
   });
 });
 preview(stage);

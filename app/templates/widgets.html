@@ -9,6 +9,7 @@
 {% macro intake() %}
 <form class="source" id="source" aria-label="批次输入">
   <label>输入样例 <select id="profile"><option value="dirty">带异常样例</option><option value="clean">可签发样例</option></select></label>
+  <label for="pilot-partitions">试点分区 <input id="pilot-partitions" name="pilot_partitions" inputmode="numeric" placeholder="如 7，逗号分隔" autocomplete="off"></label>
   <label for="file" class="file">上传 CSV</label><input id="file" type="file" accept=".csv,text/csv"><span id="file-name" aria-live="polite"></span>
   <button type="submit" class="action">执行批次</button>
 </form>
@@ -22,7 +23,7 @@
 {% endmacro %}
 {% macro results() %}
 <section class="panel results" aria-labelledby="panel-title">
-  <div class="panel-head"><h2 id="panel-title">运行对账</h2><span id="counts"></span></div>
+  <div class="panel-head"><h2 id="panel-title">运行对账</h2><span id="release-state" data-ready="unknown">尚未对账</span><span id="counts"></span></div>
   <div class="scroll"><table id="rows" aria-label="阶段结果"></table></div>
 </section>
 {% endmacro %}
@@ -35,7 +36,9 @@
 {% macro archive() %}
 <aside class="panel archive" id="review-area"><h2>批次复核</h2><ul id="history"></ul>
   <form id="review" hidden>
-    <p id="run-status"></p><label for="note">复核意见</label>
+    <p id="run-status"></p>
+    <p id="signability" class="signability" role="status" aria-live="polite">执行批次后核验签发条件</p>
+    <label for="note">复核意见</label>
     <textarea id="note" name="note" minlength="3" maxlength="200" required></textarea>
     <div class="review-actions"><button name="decision" value="HELD">暂缓</button><button class="action" name="decision" value="APPROVED">签发</button></div>
     <a id="evidence">下载复核证据</a>
